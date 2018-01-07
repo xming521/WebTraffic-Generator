@@ -1,0 +1,6 @@
+# webtraffic\proxy.py: 7
+redis == 2.10.6
+
+# webtraffic\engine.py: 8
+# webtraffic\spider.py: 5
+requests == 2.18.4
