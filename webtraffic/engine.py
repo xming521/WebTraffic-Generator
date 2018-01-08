@@ -7,14 +7,15 @@ import time
 from requests import ConnectionError, Timeout
 from requests.exceptions import ProxyError, ChunkedEncodingError
 from .config import HEADERS, PROXY_WAIT, PROXY_SPAN
-from threading import Thread
+from concurrent import futures
 
 
 class TrafficEngine(object):
 
     def __init__(self):
         """初始化代理池和代理"""
-        self.target_urls = None
+        self._target_urls = None
+        self._counter = 0
 
     def proxy_request(self, proxy, times, url=None, retry=2):
         """加载代理并发出请求
@@ -31,10 +32,11 @@ class TrafficEngine(object):
         if times <= 0 or retry <= 0:
             return
         if not url:
-            url = random.choice(self.target_urls)
+            url = random.choice(self._target_urls)
         try:
             requests.get(url, headers=HEADERS, proxies=proxy, timeout=30)
             print('%s 请求成功，正在访问 %s' % (proxy['http'], url))
+            self._counter += 1
             return self.proxy_request(proxy, times=times-1)
         except (ConnectionError, Timeout, ProxyError, ChunkedEncodingError):
             print('%s 请求失败，即将重试 %s' % (proxy['http'], url))
@@ -46,14 +48,13 @@ class TrafficEngine(object):
         :param urls: 一组链接，用于随机选择链接
         :return: True
         """
-        self.target_urls = urls
-        index = range(len(proxies))
-        threads = [Thread(
-            target=self.proxy_request,
-            args=({'http': proxy},
-                  random.randint(PROXY_SPAN[0], PROXY_SPAN[1])))
-            for proxy in proxies]
-        for i in index:
-            threads[i].start()
-        for i in index:
-            threads[i].join()
+        start_time = time.clock()
+        self._target_urls = urls
+        tmp = self._counter
+        with futures.ThreadPoolExecutor(max_workers=len(proxies)) as executor:
+            future_to_down = {executor.submit(self.proxy_request, {'http': proxy},
+                                              random.randint(PROXY_SPAN[0], PROXY_SPAN[1]))
+                              : proxy for proxy in proxies}
+            futures.as_completed(future_to_down)
+        print('='*60, '\n  本轮代理工作完毕，耗时 %d 秒，目前累计成功请求 %d 次\n'
+              % (time.clock()-start_time, self._counter-tmp), '='*60, sep='')
