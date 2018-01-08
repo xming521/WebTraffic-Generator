@@ -44,6 +44,7 @@ class TrafficProcess(Process):
         engine = TrafficEngine()
         target_urls = self.queue.get(timeout=120)
         while True:
+            print('开始重新加载代理产生流量...')
             if not self.queue.empty():
                 target_urls = self.queue.get(timeout=5)
             engine.start(proxies.get_usable(THREAD), target_urls)
