@@ -56,5 +56,5 @@ class TrafficEngine(object):
                                               random.randint(PROXY_SPAN[0], PROXY_SPAN[1]))
                               : proxy for proxy in proxies}
             futures.as_completed(future_to_down)
-        print('='*60, '\n  本轮代理工作完毕，耗时 %d 秒，目前累计成功请求 %d 次\n'
-              % (time.clock()-start_time, self._counter-tmp), '='*60, sep='')
+        print('='*64, '\n  本组结束，耗时 %d 秒，成功请求 %d 次，目前累计成功 %d 次\n'
+              % (time.clock()-start_time, self._counter-tmp, self._counter), '='*64, sep='')
