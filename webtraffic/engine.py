@@ -27,19 +27,23 @@ class TrafficEngine(object):
         :param retry: 请求失败后的重试次数
         :return: 递归进入下个请求
         """
-        # 随机间隔，避免请求过于规律
-        time.sleep(random.uniform(PROXY_WAIT[0], PROXY_WAIT[1]))
         if times <= 0 or retry <= 0:
             return
         if not url:
             url = random.choice(self._target_urls)
         try:
-            requests.get(url, headers=HEADERS, proxies=proxy, timeout=30)
+            resp = requests.get(url, headers=HEADERS, proxies=proxy, timeout=15)
             print('%s 请求成功，正在访问 %s' % (proxy['http'], url))
             self._counter += 1
+            # 按配置产生随机间隔，并根据请求时长调整
+            sleep_parm = 1
+            if resp.elapsed.seconds > 10:
+                sleep_parm = 0.75
+            time.sleep(random.uniform(PROXY_WAIT[0], PROXY_WAIT[1])*sleep_parm)
             return self.proxy_request(proxy, times=times-1)
         except (ConnectionError, Timeout, ProxyError, ChunkedEncodingError):
             print('%s 请求失败，即将重试 %s' % (proxy['http'], url))
+            time.sleep(2)
             return self.proxy_request(proxy, times, url, retry=retry-1)
 
     def start(self, proxies, urls):
